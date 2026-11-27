@@ -32,6 +32,8 @@ Open http://localhost:8790.
   and writes `site/data/restaurants.json` (about 1.1 MB, about 300 KB gzipped) and `site/data/meta.json`.
 - `site/`: plain HTML, CSS and JavaScript with no build step. Restaurant pages use shareable links like
   `#/r/<facility id>`.
+- Restaurant pages link out to Yelp, Google Maps and Apple Maps for reviews and directions. The links are built
+  from the city's name, address and coordinates, and no third-party data is fetched or stored.
 - The map uses [MapLibre GL JS](https://maplibre.org) 5.24.1 with free vector tiles from
   [OpenFreeMap](https://openfreemap.org) (no API key):
   - **2D**: Light, Dark or Streets basemap (Match system by default), with score dots.

@@ -253,6 +253,21 @@ function nearbyHtml(r) {
   </div>`;
 }
 
+function linksHtml(r) {
+  const urls = buildMapLinks(r);
+  const name = esc(r[I.name].trim());
+  const items = [
+    ["yelp", "View on Yelp", "on Yelp"],
+    ["google", "View on Google Maps", "on Google Maps"],
+    ["apple", "View in Apple Maps", "in Apple Maps"],
+  ].filter(([key]) => urls[key]);
+  if (!items.length) return "";
+  return `<section class="outlinks" aria-label="Find this place elsewhere">
+    <ul>${items.map(([key, label, where]) => `<li><a class="outlink" href="${esc(urls[key])}" target="_blank" rel="noopener noreferrer" aria-label="View ${name} ${where} (opens in a new tab)">${label}<span aria-hidden="true"> ↗</span></a></li>`).join("")}</ul>
+    <p class="note">Links open third-party sites. This project is not affiliated with Yelp, Google, or Apple.</p>
+  </section>`;
+}
+
 function renderDetail(id) {
   const r = state.byId.get(id);
   if (!r) {
@@ -279,6 +294,7 @@ function renderDetail(id) {
           <p class="muted">Inspected ${fmtDate(l[0])} (${ago(l[0])})${avg != null && scored.length > 1 ? `. Average across ${scored.length} inspections: ${avg}.` : "."}</p>
         </div>
       </div>
+      ${linksHtml(r)}
       ${nearbyHtml(r)}
       ${chartSvg(insp)}
       <table>
