@@ -1,0 +1,4 @@
+Restaurant Name,Zip Code,Inspection Date,Score,Address,Facility ID,Process Description,lat,lng,InspectionID,GeoReferenct,InspectionScoreCategory
+Good Before,78701,01/02/2026,90,"9 Row St Austin, TX 78701",500009,Routine Inspection,30.9,-97.9,800010,,
+Cut Off Cafe,78701,01/03/2026,91,"10 Row St Austin, TX 78701",500010,Routine Inspection,30.1
+Good After,78701,01/04/2026,92,"11 Row St Austin, TX 78701",500011,Routine Inspection,30.11,-97.11,800012,,

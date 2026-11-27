@@ -1,0 +1,12 @@
+# Rust build output
+target/
+
+# Download cache (raw.csv, fetch.json); site/data/ is tracked
+/data/
+
+# Partial writes from the pipeline
+*.json.tmp
+*.csv.tmp
+
+# macOS
+.DS_Store

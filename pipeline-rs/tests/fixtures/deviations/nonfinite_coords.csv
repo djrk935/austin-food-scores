@@ -1,0 +1,5 @@
+Restaurant Name,Zip Code,Inspection Date,Score,Address,Facility ID,Process Description,lat,lng,InspectionID,GeoReferenct,InspectionScoreCategory
+NaN Noodles,78701,01/02/2026,90,"5 Float St Austin, TX 78701",500005,Routine Inspection,NaN,-97.5,800006,,
+Infinity Grill,78701,01/03/2026,91,"6 Float St Austin, TX 78701",500006,Routine Inspection,30.6,Infinity,800007,,
+Inf Inn,78701,01/04/2026,92,"7 Float St Austin, TX 78701",500007,Routine Inspection,-inf,inf,800008,,
+Finite Fare,78701,01/05/2026,93,"8 Float St Austin, TX 78701",500008,Routine Inspection,30.8,-97.8,800009,,

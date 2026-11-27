@@ -1,0 +1,4 @@
+Restaurant Name,Zip Code,Inspection Date,Score,Address,Facility ID,Process Description,lat,lng,InspectionID,GeoReferenct,InspectionScoreCategory
+Arabic Digit Deli,78701,01/02/2026,٣,"2 Digit St Austin, TX 78701",500002,Routine Inspection,30.2,-97.2,800003,,
+Superscript Subs,78701,01/03/2026,²,"3 Digit St Austin, TX 78701",500003,Routine Inspection,30.3,-97.3,800004,,
+Plain Pizza,78701,01/04/2026,90,"4 Digit St Austin, TX 78701",500004,Routine Inspection,30.4,-97.4,800005,,

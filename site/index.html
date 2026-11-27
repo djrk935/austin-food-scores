@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Austin Food Scores</title>
+  <meta name="description" content="Search health inspection scores for Austin-area restaurants on a 2D or 3D map, from official City of Austin data.">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
+  <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+  <div id="map" role="region" aria-label="Map of restaurants colored by latest inspection score"></div>
+
+  <aside class="panel" aria-label="Restaurant inspection scores">
+    <header class="top">
+      <a href="#/" class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        Austin Food Scores
+      </a>
+      <p class="tagline" id="tagline">Health inspection scores for Austin-area restaurants.</p>
+    </header>
+
+    <label class="search" for="q">
+      <span class="visually-hidden">Search restaurants</span>
+      <svg class="search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.2-4.2"/></svg>
+      <input id="q" type="search" autocomplete="off" placeholder="Search a restaurant, street or ZIP" disabled>
+    </label>
+
+    <div id="view" aria-live="polite">
+      <p class="muted">Loading inspection data…</p>
+    </div>
+
+    <footer class="foot">
+      <p id="source">Data: City of Austin, Austin Public Health.</p>
+      <p>Scores reflect conditions on the day of each inspection. Independent site, not affiliated with the City of Austin.</p>
+    </footer>
+  </aside>
+
+  <div class="map-ui">
+    <div class="segmented" role="group" aria-label="Map view">
+      <button type="button" data-mode="2d" aria-pressed="true">2D</button>
+      <button type="button" data-mode="3d" aria-pressed="false">3D</button>
+    </div>
+    <button type="button" class="chip" id="layers-toggle" aria-expanded="false" aria-controls="layers">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
+      Layers
+    </button>
+    <form id="layers" class="layers" hidden>
+      <fieldset>
+        <legend>Map style</legend>
+        <label><input type="radio" name="basemap" value="auto"> Match system</label>
+        <label><input type="radio" name="basemap" value="light"> Light</label>
+        <label><input type="radio" name="basemap" value="dark"> Dark</label>
+        <label><input type="radio" name="basemap" value="streets"> Streets</label>
+        <p class="note" id="basemap-note" hidden>3D always uses the dark city style.</p>
+      </fieldset>
+      <fieldset>
+        <legend>Layers</legend>
+        <label><input type="checkbox" name="dots"> Score dots</label>
+        <label><input type="checkbox" name="heat"> Low-score heatmap</label>
+        <label><input type="checkbox" name="rings"> Radius rings</label>
+        <label class="only-3d"><input type="checkbox" name="buildings"> 3D buildings</label>
+        <label class="only-3d"><input type="checkbox" name="roads"> Road glow</label>
+      </fieldset>
+    </form>
+  </div>
+
+  <ul class="legend" aria-label="Score colors">
+    <li><span class="dot good"></span>90–100</li>
+    <li><span class="dot ok"></span>70–89</li>
+    <li><span class="dot bad"></span>Under 70</li>
+  </ul>
+
+  <script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
+  <script src="app.js?v=4"></script>
+</body>
+</html>

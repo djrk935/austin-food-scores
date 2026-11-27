@@ -1,0 +1,23 @@
+Restaurant Name,Zip Code,Inspection Date,Score,Address,Facility ID,Process Description,lat,lng,InspectionID,GeoReferenct,InspectionScoreCategory
+"Joe's Tacos, Bar & Grill",78701-1234,03/15/2026,95,"500 E 6th St Austin, TX 78701-1234",100001,Routine Inspection,30.26700,-97.73800,900001,POINT (-97.738 30.267),90+ (Green)
+"The ""Best"" Kolaches",78702,02/01/2026,88,"12  Elm   St Austin, TX 78702",100002,Routine Inspection,30.2601,-97.7201,900002,,70-89 (Yellow)
+Northside Diner,78753,04/10/2026,,"8000 N Lamar Blvd
+Ste 5 Austin, TX 78753",100003,Routine Inspection,30.3401,-97.7101,900003,,
+Zero Grill,78704,05/20/2025,0,"1 S 1st St Austin, TX 78704",100004,Routine Inspection,30.2501,-97.7501,900004,, Under 70 (Red)
+No Coords Cafe,78745,06/06/2026,91,"2 Nowhere Ln Austin, TX 78745",100005,Routine Inspection,,,900005,,90+ (Green)
+Tie Test Cafe,78741,12/31/2024,,"3 Tie St Austin, TX 78741",12399010,Routine Inspection,30.2302,-97.7202,1460333,,
+Joes Tacos,78701,09/01/2025,82,"500 E 6th St Austin, TX 78701",100001,Follow-Up Inspection,30.26701,-97.73801,900006,,70-89 (Yellow)
+
+Tie Test Cafe,78741,12/31/2024,83,"3 Tie St Austin, TX 78741",12399010,Routine Inspection,30.2302,-97.7202,1417043,,70-89 (Yellow)
+Tie Test Cafe,78741,06/15/2024,90,"3 Tie St Austin, TX 78741",12399010,Routine Inspection,30.2302,-97.7202,1400001,,90+ (Green)
+The Best Kolaches,78702,03/01/2026,99,"12 Elm St Austin, TX 78702",100002,Routine Inspection,30.2601,-97.7201,900002,,90+ (Green)
+Bad Date Bistro,78703,13/45/2026,85,"4 Oops Ave Austin, TX 78703",100006,Routine Inspection,30.2901,-97.7601,900010,,
+Bad Date Bistro,78703,07/04/2026,86,"4 Oops Ave Austin, TX 78703",100006,Routine Inspection,30.2901,-97.7601,900010,,70-89 (Yellow)
+Ghost Kitchen,78701,07/05/2026,90,"5 Nowhere St Austin, TX 78701",,Routine Inspection,30.2,-97.7,900012,,
+Café Olé,78702,1/5/2026,97,"6 Ñandú Ln Austin, TX 78702",100009,Routine Inspection,30.1234567,-97.7654321,900013,,90+ (Green)
+Subway,78701,08/08/2026,94,"7 Chain Rd Austin, TX 78701",200002,Routine Inspection,30.27,-97.74,900014,,90+ (Green)
+Subway,78705,08/09/2026,93,"8 Chain Rd Austin, TX 78705",200001,Routine Inspection,30.28,-97.75,900015,,90+ (Green)
+apple Bistro,78731,08/10/2026,92,"9 Fruit St Austin, TX 78731",300001,Routine Inspection,30.33,-97.76,900016,,90+ (Green)
+Apple Annex,78731,08/11/2026,91,"10 Fruit St Austin, TX 78731",300002,Routine Inspection,30.34,-97.77,900017,,90+ (Green)
+Trailing Short,78750,07/07/2026,93,"11 Short Rd Austin, TX 78750",100007,Routine Inspection,30.4401,-97.7901,900018
+  Padded Place  , 78758-1111 ,08/12/2026, 92 ,"12 Pad Way Austin, TX 78758", 100008 ,Routine Inspection, 30.3501 , -97.6901 , 900019 ,,90+ (Green)

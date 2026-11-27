@@ -1,0 +1,3 @@
+﻿Restaurant Name,Zip Code,Inspection Date,Score,Address,Facility ID,Process Description,lat,lng,InspectionID,GeoReferenct,InspectionScoreCategory
+Bom Cafe,78701,01/02/2026,95,"1 Bom St Austin, TX 78701",500001,Routine Inspection,30.1,-97.1,800001,,
+Bom Cafe,78701,03/04/2026,96,"1 Bom St Austin, TX 78701",500001,Routine Inspection,30.1,-97.1,800002,,

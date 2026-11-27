@@ -1,0 +1,9 @@
+{
+  "source": "https://data.austintexas.gov/d/ecmv-9xxi",
+  "built": "2026-11-26T20:56:49+00:00",
+  "oldestInspection": "2024-06-15",
+  "newestInspection": "2026-08-12",
+  "facilities": 14,
+  "inspections": 17,
+  "skippedRows": 3
+}
