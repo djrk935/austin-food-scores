@@ -8,27 +8,19 @@ const MILE = 1609.344;
 const RING_MILES = [0.25, 0.5, 0.75, 1];
 const RING_LABELS = { 0.25: "¼ mi", 0.5: "½ mi", 0.75: "¾ mi", 1: "1 mi" };
 const NEARBY_MILES = 0.5;
-const PULSE_MS = 2600;
 
-// Free vector maps from OpenFreeMap (no API key). Their tile source supplies the attribution.
-const STYLES = {
-  light: "https://tiles.openfreemap.org/styles/positron",
-  dark: "https://tiles.openfreemap.org/styles/dark",
-  streets: "https://tiles.openfreemap.org/styles/liberty",
-};
-
-// Map colors are fixed (not CSS variables) so they read the same on every basemap.
-const DOT = { good: "#22c55e", ok: "#f59e0b", bad: "#ef4444", none: "#94a3b8" };
-const MAJOR_ROADS = ["match", ["get", "class"], ["motorway", "trunk", "primary", "secondary", "tertiary"], true, false];
+// One muted map: OpenFreeMap's positron style (no API key) patched by map-style.json.
+const MAP_STYLE = "map-style.json";
+const PITCH_3D = 50;
+const CLUSTER_MAX_ZOOM = 13; // individual markers from zoom 14 up
 const EMPTY = { type: "FeatureCollection", features: [] };
 
 const REDUCED_MOTION = matchMedia("(prefers-reduced-motion: reduce)").matches;
-const DARK_SCHEME = matchMedia("(prefers-color-scheme: dark)");
 
 const prefs = loadPrefs();
 const state = {
   all: [], byId: new Map(), meta: null, points: EMPTY,
-  map: null, styleKey: null, selected: null, popup: null, pulseFrame: 0,
+  map: null, selected: null, popup: null,
 };
 const $ = (sel) => document.querySelector(sel);
 
@@ -86,9 +78,6 @@ function circle(center, meters, steps = 128) {
   }
   return coords;
 }
-function square(center, half) {
-  return [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]].map(([x, y]) => offset(center, x * half, y * half));
-}
 function distanceMeters([lng1, lat1], [lng2, lat2]) {
   const rad = Math.PI / 180;
   const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2 +
@@ -98,14 +87,11 @@ function distanceMeters([lng1, lat1], [lng2, lat2]) {
 
 // ---------- preferences (per-viewer convenience only) ----------
 function loadPrefs() {
-  const defaults = { mode: "2d", basemap: "auto", layers: { dots: true, heat: false, rings: true, buildings: true, roads: true } };
   try {
     const saved = JSON.parse(localStorage.getItem("afs-map") || "null");
-    if (saved && typeof saved === "object") {
-      return { ...defaults, ...saved, layers: { ...defaults.layers, ...(saved.layers || {}) } };
-    }
+    if (saved && (saved.mode === "2d" || saved.mode === "3d")) return { mode: saved.mode };
   } catch { /* storage unavailable */ }
-  return defaults;
+  return { mode: "3d" };
 }
 function savePrefs() {
   try { localStorage.setItem("afs-map", JSON.stringify(prefs)); } catch { /* storage unavailable */ }
@@ -311,27 +297,51 @@ function renderDetail(id) {
 }
 
 // ---------- map: setup ----------
-function styleKey() {
-  if (prefs.mode === "3d") return "dark";
-  if (prefs.basemap === "auto") return DARK_SCHEME.matches ? "dark" : "light";
-  return prefs.basemap;
+const BAND_RANGE = { good: "90–100", ok: "70–89", bad: "Under 70" };
+
+/** Loads positron from OpenFreeMap and applies the paint/hide/add patch in map-style.json. */
+async function loadMapStyle() {
+  const patch = await fetch(MAP_STYLE).then((r) => r.json());
+  const style = await fetch(patch.base).then((r) => r.json());
+  const byId = new Map(style.layers.map((l) => [l.id, l]));
+  for (const [id, paint] of Object.entries(patch.paint || {})) {
+    const layer = byId.get(id);
+    if (layer) layer.paint = { ...layer.paint, ...paint };
+  }
+  for (const id of patch.hide || []) {
+    const layer = byId.get(id);
+    if (layer) layer.layout = { ...layer.layout, visibility: "none" };
+  }
+  for (const { before, layer } of patch.add || []) {
+    const i = style.layers.findIndex((l) => l.id === before);
+    style.layers.splice(i < 0 ? style.layers.length : i, 0, layer);
+  }
+  if (patch.light) style.light = patch.light;
+  return style;
 }
 
-function initMap() {
-  state.styleKey = styleKey();
+function popupHtml(p) {
+  const score = p.score >= 0 ? p.score : null;
+  const b = band(score);
+  const text = b === "none" ? "No score · no usable score recorded" : `${score} · ${BAND_RANGE[b]}`;
+  return `<div class="pop"><strong>${esc(p.name)}</strong><span class="pop-score"><span class="swatch ${b}" aria-hidden="true"></span>${text}</span></div>`;
+}
+
+async function initMap() {
+  const style = await loadMapStyle();
   const is3d = prefs.mode === "3d";
   const map = new maplibregl.Map({
     container: "map",
-    style: STYLES[state.styleKey],
+    style,
     center: AUSTIN,
-    zoom: is3d ? 14.6 : 11,
-    pitch: is3d ? 62 : 0,
-    bearing: is3d ? -24 : 0,
-    maxPitch: 75,
+    zoom: is3d ? 13.6 : 11,
+    pitch: is3d ? PITCH_3D : 0,
+    bearing: 0,
+    maxPitch: 70,
     attributionControl: false,
   });
   state.map = map;
-  map.addControl(new maplibregl.AttributionControl({ compact: true }), "bottom-right");
+  map.addControl(new maplibregl.AttributionControl({ compact: innerWidth <= 820 }), "bottom-right");
   map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "bottom-right");
 
   map.on("style.load", onStyleLoad);
@@ -339,185 +349,95 @@ function initMap() {
   map.once("load", () => {
     if (innerWidth <= 820) document.querySelector(".maplibregl-ctrl-attrib")?.classList.remove("maplibregl-compact-show");
   });
-  // The dark style references pattern images its sprite doesn't include; draw nothing for them.
   map.on("styleimagemissing", (e) => {
     if (!map.hasImage(e.id)) map.addImage(e.id, { width: 1, height: 1, data: new Uint8Array(4) });
   });
 
-  state.popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 12, maxWidth: "300px" });
-  for (const layer of ["app-dots", "app-dots-glow"]) {
-    map.on("mouseenter", layer, (e) => {
-      map.getCanvas().style.cursor = "pointer";
-      const f = e.features[0];
-      const score = f.properties.score >= 0 ? f.properties.score : null;
-      state.popup
-        .setLngLat(f.geometry.coordinates)
-        .setHTML(`<div class="pop"><strong>${esc(f.properties.name)}</strong>${badge(score)}</div>`)
-        .addTo(map);
-    });
-    map.on("mouseleave", layer, () => {
-      map.getCanvas().style.cursor = "";
-      state.popup.remove();
-    });
-    map.on("click", layer, (e) => {
-      location.hash = `#/r/${encodeURIComponent(e.features[0].properties.id)}`;
-    });
+  state.popup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10, maxWidth: "300px" });
+  map.on("mouseenter", "app-dots", (e) => {
+    map.getCanvas().style.cursor = "pointer";
+    const f = e.features[0];
+    state.popup.setLngLat(f.geometry.coordinates).setHTML(popupHtml(f.properties)).addTo(map);
+  });
+  map.on("mouseleave", "app-dots", () => {
+    map.getCanvas().style.cursor = "";
+    state.popup.remove();
+  });
+  map.on("click", "app-dots", (e) => {
+    location.hash = `#/r/${encodeURIComponent(e.features[0].properties.id)}`;
+  });
+  // Clusters: clicking zooms in until the cluster splits.
+  map.on("mouseenter", "app-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+  map.on("mouseleave", "app-clusters", () => { map.getCanvas().style.cursor = ""; });
+  map.on("click", "app-clusters", async (e) => {
+    const f = e.features[0];
+    const zoom = await map.getSource("app-points").getClusterExpansionZoom(f.properties.cluster_id);
+    map.easeTo({ center: f.geometry.coordinates, zoom, duration: REDUCED_MOTION ? 0 : 500 });
+  });
+
+  // A restaurant link opened before the map existed: move there now, without animating.
+  if (state.selected && hasCoords(state.selected)) {
+    map.jumpTo({ center: lngLat(state.selected), zoom: 15 });
   }
 }
 
-/** Runs after every style load: custom sources and layers don't survive setStyle(). */
+/** Adds the app's sources and layers on top of the muted basemap. */
 function onStyleLoad() {
   const map = state.map;
-  const dark = state.styleKey === "dark";
-  const ink = dark ? "#e0f2fe" : "#075985";
-  const halo = dark ? "rgba(7,11,20,0.85)" : "rgba(255,255,255,0.9)";
-  // Insert below the labels but above every road and building layer: some styles put a water-name
-  // label before their roads, so "the first symbol layer" would hide the glow under the roads.
-  const styleLayers = map.getStyle().layers;
-  let lastShape = -1;
-  styleLayers.forEach((l, i) => { if (l.type !== "symbol") lastShape = i; });
-  const labels = styleLayers.slice(lastShape + 1).find((l) => l.type === "symbol")?.id;
-  const bandColor = ["match", ["get", "band"], "good", DOT.good, "ok", DOT.ok, "bad", DOT.bad, DOT.none];
+  const color = { good: cssVar("--band-good"), ok: cssVar("--band-ok"), bad: cssVar("--band-bad"), none: cssVar("--band-none") };
+  const ink = cssVar("--map-ink");
+  const ink2 = cssVar("--map-ink-2");
+  const accent = cssVar("--map-accent");
 
-  map.addSource("app-points", { type: "geojson", data: state.points });
-  for (const id of ["app-rings", "app-ring-labels", "app-pulse", "app-beacon", "app-selected"]) {
+  map.addSource("app-points", {
+    type: "geojson", data: state.points,
+    cluster: true, clusterRadius: 40, clusterMaxZoom: CLUSTER_MAX_ZOOM,
+  });
+  for (const id of ["app-rings", "app-ring-labels", "app-selected"]) {
     map.addSource(id, { type: "geojson", data: EMPTY });
   }
 
-  // Under the map labels: roads, buildings, heatmap.
-  map.addLayer({
-    id: "app-road-glow", type: "line", source: "openmaptiles", "source-layer": "transportation", filter: MAJOR_ROADS,
-    layout: { "line-cap": "round", "line-join": "round" },
-    paint: {
-      "line-color": "#38bdf8",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 11, 3, 14, 9, 17, 22],
-      "line-blur": ["interpolate", ["linear"], ["zoom"], 11, 2, 17, 10],
-      "line-opacity": 0.6,
-    },
-  }, labels);
-  map.addLayer({
-    id: "app-road-core", type: "line", source: "openmaptiles", "source-layer": "transportation", filter: MAJOR_ROADS,
-    layout: { "line-cap": "round", "line-join": "round" },
-    paint: {
-      "line-color": "#f0f9ff",
-      "line-width": ["interpolate", ["linear"], ["zoom"], 11, 0.5, 14, 1.4, 17, 3],
-      "line-opacity": 0.9,
-    },
-  }, labels);
-  map.addLayer({
-    id: "app-buildings", type: "fill-extrusion", source: "openmaptiles", "source-layer": "building", minzoom: 13,
-    filter: ["!", ["has", "hide_3d"]],
-    paint: {
-      "fill-extrusion-color": ["interpolate", ["linear"], ["coalesce", ["get", "render_height"], 0],
-        0, "#2f4060", 15, "#3a5079", 50, "#4f6e9e", 120, "#7499cb", 250, "#b3d8f8"],
-      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 13, 0, 14.5, ["coalesce", ["get", "render_height"], 0]],
-      "fill-extrusion-base": ["coalesce", ["get", "render_min_height"], 0],
-      "fill-extrusion-opacity": 0.9,
-      "fill-extrusion-vertical-gradient": true,
-    },
-  }, labels);
-  map.addLayer({
-    id: "app-heat", type: "heatmap", source: "app-points",
-    filter: ["all", [">", ["get", "score"], 0], ["<", ["get", "score"], 90]],
-    paint: {
-      "heatmap-weight": ["interpolate", ["linear"], ["get", "score"], 60, 1, 89, 0.12],
-      "heatmap-intensity": ["interpolate", ["linear"], ["zoom"], 10, 0.8, 15, 2.2],
-      "heatmap-radius": ["interpolate", ["linear"], ["zoom"], 10, 12, 15, 38],
-      "heatmap-color": ["interpolate", ["linear"], ["heatmap-density"],
-        0, "rgba(0,0,0,0)", 0.2, "rgba(251,191,36,0.35)", 0.5, "rgba(249,115,22,0.6)", 0.8, "rgba(239,68,68,0.78)", 1, "rgba(190,18,60,0.9)"],
-      "heatmap-opacity": 0.85,
-    },
-  }, labels);
-
-  // On top of everything: rings, dots, selection.
   map.addLayer({
     id: "app-rings", type: "line", source: "app-rings",
-    paint: { "line-color": ink, "line-width": ["interpolate", ["linear"], ["zoom"], 12, 1, 16, 2.2], "line-opacity": 0.8 },
-  });
-  map.addLayer({
-    id: "app-pulse", type: "line", source: "app-pulse",
-    paint: { "line-color": ink, "line-width": 3, "line-blur": 1.5, "line-opacity": ["get", "fade"] },
+    paint: { "line-color": ink2, "line-width": 1 },
   });
   map.addLayer({
     id: "app-ring-labels", type: "symbol", source: "app-ring-labels",
     layout: { "text-field": ["get", "label"], "text-font": ["Noto Sans Regular"], "text-size": 12, "text-offset": [0, -0.9], "text-allow-overlap": true },
-    paint: { "text-color": ink, "text-halo-color": halo, "text-halo-width": 1.6 },
+    paint: { "text-color": ink2, "text-halo-color": "#ffffff", "text-halo-width": 1.5 },
   });
+  // Clusters are neutral (they mix bands); size steps with the count, never with a band.
   map.addLayer({
-    id: "app-dots-glow", type: "circle", source: "app-points",
+    id: "app-clusters", type: "circle", source: "app-points", filter: ["has", "point_count"],
     paint: {
-      "circle-color": bandColor,
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 9, 18, 16],
-      "circle-blur": 1,
-      "circle-opacity": 0.4,
+      "circle-color": "#ffffff",
+      "circle-radius": ["step", ["get", "point_count"], 12, 100, 15, 500, 18],
+      "circle-stroke-width": 1,
+      "circle-stroke-color": ink2,
     },
   });
   map.addLayer({
-    id: "app-dots", type: "circle", source: "app-points",
+    id: "app-cluster-count", type: "symbol", source: "app-points", filter: ["has", "point_count"],
+    layout: { "text-field": ["get", "point_count_abbreviated"], "text-font": ["Noto Sans Regular"], "text-size": 11, "text-allow-overlap": true },
+    paint: { "text-color": ink },
+  });
+  // Individual facilities: band color, one size for every band, 1px outline, no glow.
+  map.addLayer({
+    id: "app-dots", type: "circle", source: "app-points", filter: ["!", ["has", "point_count"]],
     layout: { "circle-sort-key": ["match", ["get", "band"], "bad", 3, "ok", 2, 1] },
     paint: {
-      "circle-color": bandColor,
-      "circle-radius": ["interpolate", ["linear"], ["zoom"],
-        10, ["match", ["get", "band"], "bad", 4, 2.6],
-        14, ["match", ["get", "band"], "bad", 8, 5.5],
-        18, ["match", ["get", "band"], "bad", 13, 10]],
-      "circle-stroke-width": ["interpolate", ["linear"], ["zoom"], 10, 0.4, 15, 1.4],
-      "circle-stroke-color": dark ? "rgba(7,11,20,0.9)" : "rgba(255,255,255,0.95)",
-      "circle-opacity": 0.95,
+      "circle-color": ["match", ["get", "band"], "good", color.good, "ok", color.ok, "bad", color.bad, color.none],
+      "circle-radius": 5,
+      "circle-stroke-width": 1,
+      "circle-stroke-color": ink,
     },
-  });
-  map.addLayer({
-    id: "app-beacon", type: "fill-extrusion", source: "app-beacon",
-    paint: { "fill-extrusion-color": ["match", ["get", "band"], "good", DOT.good, "ok", DOT.ok, "bad", DOT.bad, "#38bdf8"], "fill-extrusion-height": 320, "fill-extrusion-base": 0, "fill-extrusion-opacity": 0.85 },
   });
   map.addLayer({
     id: "app-selected", type: "circle", source: "app-selected",
-    paint: { "circle-radius": 15, "circle-color": "rgba(0,0,0,0)", "circle-stroke-width": 3, "circle-stroke-color": "#38bdf8" },
+    paint: { "circle-radius": 10, "circle-color": "rgba(0,0,0,0)", "circle-stroke-width": 2, "circle-stroke-color": accent },
   });
 
-  if (dark) {
-    try {
-      map.setSky({
-        "sky-color": "#050a16", "horizon-color": "#12304f", "fog-color": "#070b14",
-        "sky-horizon-blend": 0.6, "horizon-fog-blend": 0.7, "fog-ground-blend": 0.75,
-      });
-    } catch { /* sky unsupported */ }
-  }
-  try { map.setLight({ anchor: "viewport", color: "#dbeafe", intensity: 0.35, position: [1.4, 210, 50] }); } catch { /* ignore */ }
-
-  applyVisibility();
   updateSelection();
-}
-
-function applyVisibility() {
-  const map = state.map;
-  if (!map || !map.getLayer("app-dots")) return;
-  const is3d = prefs.mode === "3d";
-  const L = prefs.layers;
-  const show = (id, on) => map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
-  show("app-road-glow", is3d && L.roads);
-  show("app-road-core", is3d && L.roads);
-  show("app-buildings", is3d && L.buildings);
-  show("app-heat", L.heat);
-  show("app-rings", L.rings);
-  show("app-ring-labels", L.rings);
-  show("app-pulse", L.rings && !REDUCED_MOTION);
-  show("app-dots-glow", is3d && L.dots);
-  show("app-dots", L.dots);
-  show("app-beacon", is3d);
-  // Smaller dots in 3D so the buildings and roads stay readable.
-  map.setPaintProperty("app-dots", "circle-radius", is3d
-    ? ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "band"], "bad", 3.5, 2.2], 15, ["match", ["get", "band"], "bad", 6, 3.6], 18, ["match", ["get", "band"], "bad", 9, 6]]
-    : ["interpolate", ["linear"], ["zoom"], 10, ["match", ["get", "band"], "bad", 4, 2.6], 14, ["match", ["get", "band"], "bad", 8, 5.5], 18, ["match", ["get", "band"], "bad", 13, 10]]);
-}
-
-/** Switch basemap if the mode or style choice needs a different one. */
-function ensureStyle() {
-  const key = styleKey();
-  if (key === state.styleKey) return;
-  state.styleKey = key;
-  state.popup?.remove();
-  state.map.setStyle(STYLES[key]);
 }
 
 // ---------- map: modes and selection ----------
@@ -526,34 +446,18 @@ function setMode(mode) {
   prefs.mode = mode;
   savePrefs();
   syncControls();
-  ensureStyle();
-  applyVisibility();
-  const map = state.map;
-  const target = state.selected && hasCoords(state.selected) ? lngLat(state.selected) : null;
-  const duration = REDUCED_MOTION ? 0 : 1800;
-  if (mode === "3d") {
-    const zoomedOut = map.getZoom() < 12.5;
-    map.easeTo({
-      center: target ?? (zoomedOut ? AUSTIN : map.getCenter()),
-      zoom: Math.max(map.getZoom(), target ? 15.4 : 14.6),
-      pitch: 62, bearing: -24, duration,
-    });
-  } else {
-    map.easeTo({ pitch: 0, bearing: 0, duration });
-  }
+  state.map?.easeTo({ pitch: mode === "3d" ? PITCH_3D : 0, bearing: 0, duration: REDUCED_MOTION ? 0 : 800 });
 }
 
 function select(r) {
   state.selected = r;
   updateSelection();
   if (!r || !hasCoords(r) || !state.map) return;
-  const is3d = prefs.mode === "3d";
   state.map.flyTo({
     center: lngLat(r),
-    zoom: Math.max(state.map.getZoom(), is3d ? 15.4 : 14.5),
-    pitch: is3d ? 62 : 0,
+    zoom: Math.max(state.map.getZoom(), 15),
     essential: false,
-    duration: REDUCED_MOTION ? 0 : 1600,
+    duration: REDUCED_MOTION ? 0 : 1200,
   });
 }
 
@@ -562,12 +466,10 @@ function updateSelection() {
   if (!map || !map.getSource("app-rings")) return;
   const r = state.selected;
   if (!r || !hasCoords(r)) {
-    for (const id of ["app-rings", "app-ring-labels", "app-pulse", "app-beacon", "app-selected"]) map.getSource(id).setData(EMPTY);
-    stopPulse();
+    for (const id of ["app-rings", "app-ring-labels", "app-selected"]) map.getSource(id).setData(EMPTY);
     return;
   }
   const c = lngLat(r);
-  const b = band(latest(r)[1]);
   const fc = (features) => ({ type: "FeatureCollection", features });
   map.getSource("app-rings").setData(fc(RING_MILES.map((mi) => ({
     type: "Feature", properties: { miles: mi }, geometry: { type: "LineString", coordinates: circle(c, mi * MILE) },
@@ -575,30 +477,7 @@ function updateSelection() {
   map.getSource("app-ring-labels").setData(fc(RING_MILES.map((mi) => ({
     type: "Feature", properties: { label: RING_LABELS[mi] }, geometry: { type: "Point", coordinates: offset(c, 0, mi * MILE) },
   }))));
-  map.getSource("app-beacon").setData(fc([{ type: "Feature", properties: { band: b }, geometry: { type: "Polygon", coordinates: [square(c, 9)] } }]));
   map.getSource("app-selected").setData(fc([{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: c } }]));
-  startPulse();
-}
-
-function startPulse() {
-  if (REDUCED_MOTION || state.pulseFrame) return;
-  const tick = (t) => {
-    state.pulseFrame = requestAnimationFrame(tick);
-    const source = state.map?.getSource("app-pulse");
-    const r = state.selected;
-    if (!source || !r || !hasCoords(r) || !prefs.layers.rings) return;
-    const p = (t % PULSE_MS) / PULSE_MS;
-    const eased = 1 - (1 - p) ** 2;
-    source.setData({
-      type: "FeatureCollection",
-      features: [{ type: "Feature", properties: { fade: 0.9 * (1 - p) }, geometry: { type: "LineString", coordinates: circle(lngLat(r), Math.max(1, eased * MILE), 96) } }],
-    });
-  };
-  state.pulseFrame = requestAnimationFrame(tick);
-}
-function stopPulse() {
-  if (state.pulseFrame) cancelAnimationFrame(state.pulseFrame);
-  state.pulseFrame = 0;
 }
 
 // ---------- controls ----------
@@ -606,57 +485,12 @@ function syncControls() {
   for (const b of document.querySelectorAll(".segmented button")) {
     b.setAttribute("aria-pressed", String(b.dataset.mode === prefs.mode));
   }
-  const form = $("#layers");
-  const is3d = prefs.mode === "3d";
-  for (const input of form.querySelectorAll('input[name="basemap"]')) {
-    input.checked = input.value === prefs.basemap;
-    input.disabled = is3d;
-    input.parentElement.classList.toggle("is-disabled", is3d);
-  }
-  $("#basemap-note").hidden = !is3d;
-  for (const [name, on] of Object.entries(prefs.layers)) {
-    const input = form.elements[name];
-    if (input) input.checked = on;
-  }
-  for (const label of form.querySelectorAll(".only-3d")) {
-    label.classList.toggle("is-disabled", !is3d);
-    label.querySelector("input").disabled = !is3d;
-  }
 }
 
 function initControls() {
   for (const b of document.querySelectorAll(".segmented button")) {
     b.addEventListener("click", () => setMode(b.dataset.mode));
   }
-  const toggle = $("#layers-toggle");
-  const form = $("#layers");
-  toggle.addEventListener("click", () => {
-    const open = form.hidden;
-    form.hidden = !open;
-    toggle.setAttribute("aria-expanded", String(open));
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !form.hidden) {
-      form.hidden = true;
-      toggle.setAttribute("aria-expanded", "false");
-      toggle.focus();
-    }
-  });
-  form.addEventListener("change", (e) => {
-    const input = e.target;
-    if (input.name === "basemap") {
-      prefs.basemap = input.value;
-      ensureStyle();
-    } else if (input.name in prefs.layers) {
-      prefs.layers[input.name] = input.checked;
-      applyVisibility();
-      if (input.name === "rings") updateSelection();
-    }
-    savePrefs();
-  });
-  DARK_SCHEME.addEventListener("change", () => {
-    if (prefs.mode === "2d" && prefs.basemap === "auto") ensureStyle();
-  });
   syncControls();
 }
 
@@ -692,7 +526,10 @@ function onSearch() {
   }
   initControls();
   if (window.maplibregl) {
-    initMap();
+    initMap().catch((err) => {
+      $("#map").innerHTML = `<p class="muted" style="padding:16px">The map didn't load. Search and lists still work.</p>`;
+      console.error(err);
+    });
   } else {
     $("#map").innerHTML = `<p class="muted" style="padding:16px">The map library didn't load. Search and lists still work.</p>`;
   }

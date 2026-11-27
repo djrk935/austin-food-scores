@@ -11,23 +11,32 @@
   --text: #0f172a;
   --muted: #5b6578;
   --line: rgba(15, 23, 42, 0.1);
-  --accent: #0369a1;
+  --accent: var(--map-accent);
   --accent-soft: rgba(3, 105, 161, 0.12);
   --glow: #38bdf8;
   --shadow: 0 10px 40px rgba(15, 23, 42, 0.16);
 
-  --good: #15803d;
+  --good: var(--band-good);
   --good-bg: #dcfce7;
-  --ok: #a16207;
+  --ok: var(--band-ok);
   --ok-bg: #fef3c7;
-  --bad: #b91c1c;
+  --bad: var(--band-bad);
   --bad-bg: #fee2e2;
-  --none: #64748b;
+  --none: var(--band-none);
   --none-bg: #e2e8f0;
 
-  --dot-good: #22c55e;
-  --dot-ok: #f59e0b;
-  --dot-bad: #ef4444;
+  /* Band colors: the list's light-theme tokens, also used as-is on the map in both themes. */
+  --band-good: #15803d;
+  --band-ok: #a16207;
+  --band-bad: #b91c1c;
+  --band-none: #64748b;
+
+  /* Map tokens (map controls, popups, legend). The basemap grays live in map-style.json. */
+  --map-paper: #ffffff;
+  --map-ink: #333333;
+  --map-ink-2: #6b6b6b;
+  --map-border: #c8c8c8;
+  --map-accent: #0369a1;
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -174,73 +183,58 @@ th { font-size: 0.76rem; color: var(--muted); font-weight: 600; }
 .foot { margin-top: 18px; padding: 0 4px; font-size: 0.76rem; color: var(--muted); }
 .foot p { margin: 4px 0; }
 
-/* ---------- map controls ---------- */
+/* ---------- map controls: square, 1px border, no shadow ---------- */
 .map-ui {
   position: fixed; top: var(--gap); right: var(--gap); z-index: 3;
-  display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; justify-content: flex-end;
+  display: flex; gap: 8px; align-items: flex-start;
 }
-.segmented, .chip, .layers, .legend {
-  background: var(--glass);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  backdrop-filter: blur(18px) saturate(160%);
-  border: 1px solid var(--line);
-  box-shadow: var(--shadow);
+.segmented, .legend {
+  background: var(--map-paper); color: var(--map-ink);
+  border: 1px solid var(--map-border); border-radius: 0; box-shadow: none;
 }
-.segmented { display: flex; padding: 3px; border-radius: 12px; }
+.segmented { display: flex; }
 .segmented button {
-  border: 0; background: transparent; cursor: pointer;
-  padding: 7px 16px; border-radius: 9px; font-weight: 650; letter-spacing: 0.02em; color: var(--muted);
+  border: 0; border-radius: 0; background: transparent; cursor: pointer;
+  padding: 7px 16px; font: inherit; font-weight: 650; color: var(--map-ink);
 }
-.segmented button[aria-pressed="true"] {
-  color: #04121f; background: var(--glow);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
-}
-.chip {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 13px; border-radius: 12px; cursor: pointer; font-weight: 600;
-}
-.chip svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linejoin: round; }
-.chip[aria-expanded="true"] { outline: 2px solid var(--glow); outline-offset: -1px; }
-.segmented button:focus-visible, .chip:focus-visible { outline: 2px solid var(--glow); outline-offset: 2px; }
-
-.layers {
-  flex-basis: 100%; max-width: 250px; margin-left: auto;
-  padding: 12px 14px; border-radius: 14px; font-size: 0.9rem;
-}
-.layers fieldset { border: 0; margin: 0; padding: 0; }
-.layers fieldset + fieldset { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-.layers legend { padding: 0; margin-bottom: 4px; font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
-.layers label { display: flex; align-items: center; gap: 8px; padding: 3px 0; cursor: pointer; }
-.layers input { accent-color: var(--glow); margin: 0; }
-.layers label.is-disabled { opacity: 0.45; cursor: default; }
-.layers .note { margin: 4px 0 0; }
+.segmented button + button { border-left: 1px solid var(--map-border); }
+.segmented button[aria-pressed="true"] { color: #ffffff; background: var(--map-accent); }
+.segmented button:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 2px; }
 
 .legend {
   position: fixed; z-index: 2;
   left: calc(var(--panel-w) + var(--gap) * 2); bottom: var(--gap);
-  display: flex; gap: 12px; margin: 0; padding: 7px 12px; list-style: none;
-  border-radius: 12px; font-size: 0.8rem;
+  display: flex; gap: 12px; margin: 0; padding: 6px 10px; list-style: none; font-size: 0.8rem;
 }
-.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
-.dot.good { background: var(--dot-good); } .dot.ok { background: var(--dot-ok); } .dot.bad { background: var(--dot-bad); }
-.dot.good, .dot.ok, .dot.bad { box-shadow: 0 0 8px currentColor; }
+/* Same marker as the map: band fill, 1px ink outline. */
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; border: 1px solid var(--map-ink); }
+.dot.good { background: var(--band-good); } .dot.ok { background: var(--band-ok); } .dot.bad { background: var(--band-bad); }
 
 /* ---------- MapLibre chrome ---------- */
+.maplibregl-map { font: inherit; } /* popups and controls use the body font, not MapLibre's Helvetica */
 .maplibregl-popup-content {
-  padding: 8px 11px; border-radius: 11px;
-  background: var(--glass-strong); color: var(--text);
-  border: 1px solid var(--line); box-shadow: var(--shadow);
-  font: 13px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  padding: 7px 10px; border-radius: 0;
+  background: var(--map-paper); color: var(--map-ink);
+  border: 1px solid var(--map-border); box-shadow: none;
+  font: inherit; font-size: 13px; line-height: 1.35;
 }
-.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color: var(--glass-strong); }
-.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color: var(--glass-strong); }
-.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color: var(--glass-strong); }
-.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color: var(--glass-strong); }
-.pop { display: flex; align-items: center; gap: 10px; }
-.pop strong { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pop .badge { min-width: 34px; padding: 2px 6px; font-size: 0.85rem; }
+.maplibregl-popup-tip { display: none; }
+.pop { display: flex; flex-direction: column; gap: 2px; }
+.pop strong { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pop-score { display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+.swatch { width: 10px; height: 10px; border-radius: 50%; border: 1px solid var(--map-ink); background: var(--band-none); }
+.swatch.good { background: var(--band-good); } .swatch.ok { background: var(--band-ok); } .swatch.bad { background: var(--band-bad); }
 .maplibregl-ctrl-bottom-right { margin: 0 var(--gap) var(--gap) 0; }
-.maplibregl-ctrl-group { border-radius: 12px; overflow: hidden; }
+.maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 8px 0 0 0; }
+.maplibregl-ctrl-group:not(:empty) { border-radius: 0; box-shadow: none; border: 1px solid var(--map-border); background: var(--map-paper); }
+.maplibregl-ctrl-group button { border-radius: 0; }
+.maplibregl-ctrl-group button + button { border-top: 1px solid var(--map-border); }
+.maplibregl-ctrl button:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 1px; box-shadow: none; }
+.maplibregl-ctrl-attrib, .maplibregl-ctrl-attrib.maplibregl-compact, .maplibregl-ctrl-attrib-button {
+  border-radius: 0; box-shadow: none;
+}
+.maplibregl-ctrl.maplibregl-ctrl-attrib { background: var(--map-paper); color: var(--map-ink-2); border: 1px solid var(--map-border); }
+.maplibregl-ctrl-attrib a { color: var(--map-ink-2); }
 
 /* ---------- small screens: map on top, panel below ---------- */
 @media (max-width: 820px) {

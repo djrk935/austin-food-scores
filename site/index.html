@@ -7,7 +7,7 @@
   <meta name="description" content="Search health inspection scores for Austin-area restaurants on a 2D or 3D map, from official City of Austin data.">
   <meta name="color-scheme" content="light dark">
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.css">
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
   <div id="map" role="region" aria-label="Map of restaurants colored by latest inspection score"></div>
@@ -42,28 +42,6 @@
       <button type="button" data-mode="2d" aria-pressed="true">2D</button>
       <button type="button" data-mode="3d" aria-pressed="false">3D</button>
     </div>
-    <button type="button" class="chip" id="layers-toggle" aria-expanded="false" aria-controls="layers">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/></svg>
-      Layers
-    </button>
-    <form id="layers" class="layers" hidden>
-      <fieldset>
-        <legend>Map style</legend>
-        <label><input type="radio" name="basemap" value="auto"> Match system</label>
-        <label><input type="radio" name="basemap" value="light"> Light</label>
-        <label><input type="radio" name="basemap" value="dark"> Dark</label>
-        <label><input type="radio" name="basemap" value="streets"> Streets</label>
-        <p class="note" id="basemap-note" hidden>3D always uses the dark city style.</p>
-      </fieldset>
-      <fieldset>
-        <legend>Layers</legend>
-        <label><input type="checkbox" name="dots"> Score dots</label>
-        <label><input type="checkbox" name="heat"> Low-score heatmap</label>
-        <label><input type="checkbox" name="rings"> Radius rings</label>
-        <label class="only-3d"><input type="checkbox" name="buildings"> 3D buildings</label>
-        <label class="only-3d"><input type="checkbox" name="roads"> Road glow</label>
-      </fieldset>
-    </form>
   </div>
 
   <ul class="legend" aria-label="Score colors">
@@ -74,6 +52,6 @@
 
   <script src="https://unpkg.com/maplibre-gl@5.24.1/dist/maplibre-gl.js"></script>
   <script src="links.js?v=1"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>
